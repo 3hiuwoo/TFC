@@ -2,11 +2,11 @@
 class Config(object):
     def __init__(self):
         # model configs
-        self.input_channels = 15
+        self.input_channels = 12
         self.increased_dim = 1
         self.final_out_channels = 128
-        self.num_classes = 2
-        self.num_classes_target = 2
+        self.num_classes = 4
+        self.num_classes_target = 4
         self.dropout = 0.35
 
 

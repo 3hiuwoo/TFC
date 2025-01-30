@@ -14,7 +14,7 @@ def one_hot_encoding(X):
     b = np.eye(n_values)[X]
     return b
 
-def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, test_dl, device,
+def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, eval_dl, test_dl, device,
             logger, config, experiment_log_dir, training_mode):
     # Start training
     logger.debug("Training started ....")
@@ -46,14 +46,23 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
         for epoch in range(1, config.num_epoch + 1):
             logger.debug(f'\nEpoch : {epoch}')
 
-            valid_loss, emb_finetune, label_finetune, F1 = model_finetune(model, model_optimizer, valid_dl, config,
+            valid_loss, emb_finetune, label_finetune, _ = model_finetune(model, model_optimizer, valid_dl, config,
                                   device, training_mode, classifier=classifier, classifier_optimizer=classifier_optimizer)
             scheduler.step(valid_loss)
-
+            
+            # evaluate on the test set
+            """Testing set"""
+            logger.debug('Test on Target datasts test set')
+            model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
+            classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
+            test_loss, test_acc, test_auc, test_prc, emb_test, label_test, performance = model_test(model, eval_dl, config, device, training_mode,
+                                                             classifier=classifier, classifier_optimizer=classifier_optimizer)
+            performance_list.append(performance)
+            F1 = performance[3]
 
             # save best fine-tuning model""
             global arch
-            arch = 'sleepedf2eplipsy'
+            arch = 'ecg'
             if len(total_f1) == 0 or F1 > max(total_f1):
                 print('update fine-tuned model')
                 os.makedirs('experiments_logs/finetunemodel/', exist_ok=True)
@@ -61,45 +70,49 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
                 torch.save(classifier.state_dict(), 'experiments_logs/finetunemodel/' + arch + '_classifier.pt')
             total_f1.append(F1)
 
-            # evaluate on the test set
-            """Testing set"""
-            logger.debug('Test on Target datasts test set')
-            model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
-            classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
-            test_loss, test_acc, test_auc, test_prc, emb_test, label_test, performance = model_test(model, test_dl, config, device, training_mode,
-                                                             classifier=classifier, classifier_optimizer=classifier_optimizer)
             performance_list.append(performance)
 
-            """Use KNN as another classifier; it's an alternation of the MLP classifier in function model_test. 
-            Experiments show KNN and MLP may work differently in different settings, so here we provide both. """
-            # train classifier: KNN
-            neigh = KNeighborsClassifier(n_neighbors=5)
-            neigh.fit(emb_finetune, label_finetune)
-            knn_acc_train = neigh.score(emb_finetune, label_finetune)
-            # print('KNN finetune acc:', knn_acc_train)
-            representation_test = emb_test.detach().cpu().numpy()
+            # """Use KNN as another classifier; it's an alternation of the MLP classifier in function model_test. 
+            # Experiments show KNN and MLP may work differently in different settings, so here we provide both. """
+            # # train classifier: KNN
+            # neigh = KNeighborsClassifier(n_neighbors=5)
+            # neigh.fit(emb_finetune, label_finetune)
+            # knn_acc_train = neigh.score(emb_finetune, label_finetune)
+            # # print('KNN finetune acc:', knn_acc_train)
+            # representation_test = emb_test.detach().cpu().numpy()
 
-            knn_result = neigh.predict(representation_test)
-            knn_result_score = neigh.predict_proba(representation_test)
-            one_hot_label_test = one_hot_encoding(label_test)
-            # print(classification_report(label_test, knn_result, digits=4))
-            # print(confusion_matrix(label_test, knn_result))
-            knn_acc = accuracy_score(label_test, knn_result)
-            precision = precision_score(label_test, knn_result, average='macro', )
-            recall = recall_score(label_test, knn_result, average='macro', )
-            F1 = f1_score(label_test, knn_result, average='macro')
-            auc = roc_auc_score(one_hot_label_test, knn_result_score, average="macro", multi_class="ovr")
-            prc = average_precision_score(one_hot_label_test, knn_result_score, average="macro")
-            print('KNN Testing: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f'%
-                  (knn_acc, precision, recall, F1, auc, prc))
-            KNN_f1.append(F1)
+            # knn_result = neigh.predict(representation_test)
+            # knn_result_score = neigh.predict_proba(representation_test)
+            # one_hot_label_test = one_hot_encoding(label_test)
+            # # print(classification_report(label_test, knn_result, digits=4))
+            # # print(confusion_matrix(label_test, knn_result))
+            # knn_acc = accuracy_score(label_test, knn_result)
+            # precision = precision_score(label_test, knn_result, average='macro', )
+            # recall = recall_score(label_test, knn_result, average='macro', )
+            # F1 = f1_score(label_test, knn_result, average='macro')
+            # auc = roc_auc_score(one_hot_label_test, knn_result_score, average="macro", multi_class="ovr")
+            # prc = average_precision_score(one_hot_label_test, knn_result_score, average="macro")
+            # print('KNN Testing: Acc=%.6f| Precision = %.6f | Recall = %.6f | F1 = %.6f | AUROC= %.6f | AUPRC=%.6f'%
+            #       (knn_acc, precision, recall, F1, auc, prc))
+            # KNN_f1.append(F1)
         logger.debug("\n################## Best testing performance! #########################")
-        performance_array = np.array(performance_list)
-        best_performance = performance_array[np.argmax(performance_array[:,0], axis=0)]
-        print('Best Testing Performance: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f '
-              '| AUPRC=%.4f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
+        # evaluate on the test set
+        """Testing set"""
+        logger.debug('Test on Target datasts test set')
+        model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
+        classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
+        test_loss, test_acc, test_auc, test_prc, emb_test, label_test, best_performance = model_test(model, test_dl, config, device, training_mode,
+                                                            classifier=classifier, classifier_optimizer=classifier_optimizer)
+        # performance_array = np.array(performance_list)
+        # best_performance = performance_array[np.argmax(performance_array[:,0], axis=0)]
+        print('Best Testing Performance: Acc=%.6f| Precision = %.6f | Recall = %.6f | F1 = %.6f | AUROC= %.6f '
+              '| AUPRC=%.6f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
                                 best_performance[4], best_performance[5]))
-        print('Best KNN F1', max(KNN_f1))
+        with open('log.txt', 'a') as f:
+            f.write('Best Testing Performance: Acc=%.6f| Precision = %.6f | Recall = %.6f | F1 = %.6f | AUROC= %.6f '
+                    '| AUPRC=%.6f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
+                                      best_performance[4], best_performance[5]))
+        # print('Best KNN F1', max(KNN_f1))
 
     logger.debug("\n################## Training is Done! #########################")
 
@@ -218,7 +231,7 @@ def model_finetune(model, model_optimizer, val_dl, config, device, training_mode
             outs = np.append(outs, pred.cpu().numpy())
             trgs = np.append(trgs, labels.data.cpu().numpy())
             feas = np.append(feas, fea_concat_flat.data.cpu().numpy())
-
+    
     feas = feas.reshape([len(trgs), -1])  # produce the learned embeddings
 
     labels_numpy = labels.detach().cpu().numpy()
@@ -231,8 +244,8 @@ def model_finetune(model, model_optimizer, val_dl, config, device, training_mode
     ave_auc = torch.tensor(total_auc).mean()
     ave_prc = torch.tensor(total_prc).mean()
 
-    print(' Finetune: loss = %.4f| Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f| AUROC=%.4f | AUPRC = %.4f'
-          % (ave_loss, ave_acc*100, precision * 100, recall * 100, F1 * 100, ave_auc * 100, ave_prc *100))
+    print(' Finetune: loss = %.6f| Acc=%.6f | Precision = %.6f | Recall = %.6f | F1 = %.6f| AUROC=%.6f | AUPRC = %.6f'
+          % (ave_loss, ave_acc, precision, recall, F1, ave_auc, ave_prc))
 
     return ave_loss, feas, trgs, F1
 
@@ -302,8 +315,8 @@ def model_test(model,  test_dl, config,  device, training_mode, classifier=None,
     total_auc = torch.tensor(total_auc).mean()
     total_prc = torch.tensor(total_prc).mean()
 
-    performance = [acc * 100, precision * 100, recall * 100, F1 * 100, total_auc * 100, total_prc * 100]
-    print('MLP Testing: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f'
-          % (acc*100, precision * 100, recall * 100, F1 * 100, total_auc*100, total_prc*100))
+    performance = [acc, precision, recall, F1, total_auc, total_prc]
+    print('MLP Testing: Acc=%.6f| Precision = %.6f | Recall = %.6f | F1 = %.6f | AUROC= %.6f | AUPRC=%.6f'
+          % (acc, precision, recall, F1, total_auc, total_prc))
     emb_test_all = torch.concat(tuple(emb_test_all))
     return total_loss, total_acc, total_auc, total_prc, emb_test_all, trgs, performance

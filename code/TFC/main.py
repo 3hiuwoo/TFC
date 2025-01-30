@@ -89,8 +89,8 @@ logger.debug("=" * 45)
 # Load datasets
 sourcedata_path = f"../../datasets/{pretrain_dataset}"
 targetdata_path = f"../../datasets/{targetdata}"
-subset = True  # if subset= true, use a subset for debugging.
-train_dl, valid_dl, test_dl = data_generator(sourcedata_path, targetdata_path, configs, training_mode, subset = subset)
+subset = False  # if subset= true, use a subset for debugging.
+train_dl, valid_dl, eval_dl, test_dl = data_generator(sourcedata_path, targetdata_path, configs, training_mode, subset = subset)
 logger.debug("Data loaded ...")
 
 # Load Model
@@ -113,7 +113,7 @@ model_optimizer = torch.optim.Adam(TFC_model.parameters(), lr=configs.lr, betas=
 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=configs.lr, betas=(configs.beta1, configs.beta2), weight_decay=3e-4)
 
 # Trainer
-Trainer(TFC_model, model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, test_dl, device,
+Trainer(TFC_model, model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, eval_dl, test_dl, device,
         logger, configs, experiment_log_dir, training_mode)
 
 logger.debug(f"Training time is : {datetime.now()-start_time}")
