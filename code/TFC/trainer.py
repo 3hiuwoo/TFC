@@ -52,9 +52,9 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
             
             # evaluate on the test set
             """Testing set"""
-            logger.debug('Test on Target datasts test set')
-            model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
-            classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
+            logger.debug('Test on target dataset validation set')
+            # model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
+            # classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
             test_loss, test_acc, test_auc, test_prc, emb_test, label_test, performance = model_test(model, eval_dl, config, device, training_mode,
                                                              classifier=classifier, classifier_optimizer=classifier_optimizer)
             performance_list.append(performance)
