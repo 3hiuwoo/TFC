@@ -112,6 +112,7 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
             f.write('Best Testing Performance: Acc=%.6f| Precision = %.6f | Recall = %.6f | F1 = %.6f | AUROC= %.6f '
                     '| AUPRC=%.6f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
                                       best_performance[4], best_performance[5]))
+            f.write('\n')
         # print('Best KNN F1', max(KNN_f1))
 
     logger.debug("\n################## Training is Done! #########################")
