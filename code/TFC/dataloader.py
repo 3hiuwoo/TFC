@@ -97,7 +97,7 @@ class Load_Dataset(Dataset):
         return self.len
 
 
-def data_generator(sourcedata_path, targetdata_path, configs, training_mode, subset=True):
+def data_generator(sourcedata_path, targetdata_path, configs, training_mode, subset=False):
     train_dataset = torch.load(os.path.join(sourcedata_path, "train.pt"))
     finetune_dataset = torch.load(os.path.join(targetdata_path, "train.pt"))  # train.pt
     val_dataset = torch.load(os.path.join(targetdata_path, "val.pt"))  # val.pt
