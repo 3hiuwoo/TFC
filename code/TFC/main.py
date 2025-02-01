@@ -36,6 +36,7 @@ parser.add_argument('--device', default='cuda', type=str,
                     help='cpu or cuda')
 parser.add_argument('--home_path', default=home_dir, type=str,
                     help='Project home directory')
+parser.add_argument('--load_path', default='', type=str, help='Path to load the model')
 args, unknown = parser.parse_known_args()
 
 with_gpu = torch.cuda.is_available()
@@ -102,8 +103,9 @@ temporal_contr_model = None
 
 if training_mode == "fine_tune_test":
     # load saved model of this experiment
-    load_from = os.path.join(os.path.join(logs_save_dir, experiment_description, run_description,
-    f"pre_train_seed_{SEED}_2layertransformer", "saved_models"))
+    load_from = args.load_path
+    # load_from = os.path.join(os.path.join(logs_save_dir, experiment_description, run_description,
+    # f"pre_train_seed_{SEED}_2layertransformer", "saved_models"))
     print("The loading file path", load_from)
     chkpoint = torch.load(os.path.join(load_from, "ckp_last.pt"), map_location=device)
     pretrained_dict = chkpoint["model_state_dict"]
