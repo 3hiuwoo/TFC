@@ -37,6 +37,7 @@ parser.add_argument('--device', default='cuda', type=str,
 parser.add_argument('--home_path', default=home_dir, type=str,
                     help='Project home directory')
 parser.add_argument('--load_path', default='', type=str, help='Path to load the model')
+parser.add_argument('--root', default='/root/autodl-tmp/dataset2', type=str, help='Root directory')
 args, unknown = parser.parse_known_args()
 
 with_gpu = torch.cuda.is_available()
@@ -88,8 +89,8 @@ logger.debug(f'Mode:    {training_mode}')
 logger.debug("=" * 45)
 
 # Load datasets
-sourcedata_path = f"../../datasets/{pretrain_dataset}"
-targetdata_path = f"../../datasets/{targetdata}"
+sourcedata_path = os.path.join(args.root, pretrain_dataset)
+targetdata_path = os.path.join(args.root, targetdata)
 subset = False  # if subset= true, use a subset for debugging.
 train_dl, valid_dl, eval_dl, test_dl = data_generator(sourcedata_path, targetdata_path, configs, training_mode, subset = subset)
 logger.debug("Data loaded ...")
